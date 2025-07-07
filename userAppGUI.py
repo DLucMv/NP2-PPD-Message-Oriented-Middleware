@@ -16,10 +16,11 @@ class UserAppGUI(stomp.ConnectionListener):
         self.conn = stomp.Connection([('localhost', 61613)])
         self.conn.set_listener('', self)
         self.conn.connect('admin', 'admin', wait=True)
-        self.conn.subscribe(destination=self.queue, id=1, ack='auto')
 
         # Interface
         self.create_widgets()
+
+        self.conn.subscribe(destination=self.queue, id=1, ack='auto')
 
         # Thread de escuta
         threading.Thread(target=self.listen_loop, daemon=True).start()
@@ -64,7 +65,8 @@ class UserAppGUI(stomp.ConnectionListener):
         self.msg_area.see(tk.END)
 
     def on_message(self, frame):
-        self.append_message(f"📩 {frame.body}")
+        self.root.after(0, lambda: self.append_message(f"📩 {frame.body}"))
+
 
     def send_to_user(self):
         target = self.entry_user.get().strip()
@@ -105,10 +107,16 @@ class UserAppGUI(stomp.ConnectionListener):
         while True:
             time.sleep(1)
 
+    def on_close(self):
+        if self.conn.is_connected():
+            self.conn.disconnect()
+        self.root.destroy()
+
 # Execução
 if __name__ == "__main__":
     root = tk.Tk()
     nome = simpledialog.askstring("Usuário", "Digite seu nome de usuário:", parent=root)
     if nome:
         app = UserAppGUI(root, nome.strip())
+        root.protocol("WM_DELETE_WINDOW", app.on_close)
         root.mainloop()
